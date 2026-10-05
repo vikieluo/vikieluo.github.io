@@ -1,0 +1,1208 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Vikie's Plant Tracker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow phone column. Sticky title bar, content, floating primary action, two-tab bottom bar. Sheets slide up for forms; a dark full-screen viewer for photos. */
+:root{
+  --bg:#EBF0EA; --surface:#F8FBF7; --surface2:#DFE8DE; --ink:#16241B; --muted:#586B5D; --line:#C9D6C9;
+  --accent:#2E6B49; --accent-ink:#FFFFFF;
+  --water:#2A78B0; --fert:#A87612; --event:#7753AB; --danger:#B03E2D;
+  --vbg:#0B100C; --vink:#EAF1EB; --vfield:#18211A; --vline:#2C3A2F;
+  --display:'Bricolage Grotesque','Avenir Next',system-ui,sans-serif;
+  --body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'DM Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1610; --surface:#17211A; --surface2:#213026; --ink:#E4EEE6; --muted:#9AAE9F; --line:#2B3A2F;
+  --accent:#6FC08F; --accent-ink:#0B1A11;
+  --water:#6AB4EA; --fert:#E0B14C; --event:#B79BE6; --danger:#F08A78; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1610; --surface:#17211A; --surface2:#213026; --ink:#E4EEE6; --muted:#9AAE9F; --line:#2B3A2F;
+  --accent:#6FC08F; --accent-ink:#0B1A11;
+  --water:#6AB4EA; --fert:#E0B14C; --event:#B79BE6; --danger:#F08A78; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--body);-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,p,ul{margin:0;padding:0}
+ul{list-style:none}
+:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.ic{flex:none;display:block}
+
+#app{max-width:560px;margin:0 auto;padding:0 16px 150px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin:0 -16px;padding:14px 16px 10px;display:flex;align-items:center;gap:8px}
+.top-title{font:600 19px/1.15 var(--display);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}
+.top-title.big{font-size:27px;font-weight:700;white-space:normal}
+.top .sub{font:400 12px var(--mono);color:var(--muted);margin-top:4px;letter-spacing:.02em}
+.top > div{flex:1;min-width:0}
+
+.icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid transparent;background:transparent;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.icon-btn:active{background:var(--surface2)}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:14.5px}
+.btn:active{background:var(--surface2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.on{background:var(--surface2);border-color:var(--accent)}
+.btn.danger{color:var(--danger)}
+.btn.armed{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn:disabled{opacity:.5}
+
+/* tints from a per-element color */
+.t-water{--c:var(--water)} .t-fert{--c:var(--fert)} .t-event{--c:var(--event)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 8px;border-radius:999px;font-size:12.5px;font-weight:500;line-height:1.3;background:color-mix(in srgb,var(--c) 15%,var(--surface));color:color-mix(in srgb,var(--c) 72%,var(--ink))}
+
+/* plant list */
+.plist{display:flex;flex-direction:column;gap:12px}
+.pcard{display:grid;grid-template-columns:88px minmax(0,1fr);gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:12px;cursor:pointer}
+.pcard:active{background:var(--surface2)}
+.thumb{width:88px;height:88px;border-radius:14px;object-fit:cover;background:var(--surface2)}
+.thumb.ph,.hero.ph{display:flex;align-items:center;justify-content:center;color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.pname{font:600 19px/1.2 var(--display);letter-spacing:-.01em;overflow-wrap:anywhere}
+.genus{font-style:italic;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.meta{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;margin-top:2px}
+.meta:empty{display:none}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.pbody{min-width:0}
+
+/* detail */
+.hero{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:22px;background:var(--surface2)}
+.hero.ph{color:var(--accent)}
+.dhead{margin-top:14px}
+.dname{font:700 30px/1.1 var(--display);letter-spacing:-.02em;overflow-wrap:anywhere}
+.dmeta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;color:var(--muted);font-size:13.5px}
+.dmeta span{display:inline-flex;align-items:center;gap:5px}
+.dmeta .mono{font-family:var(--mono);font-size:12.5px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}
+.stat{background:color-mix(in srgb,var(--c) 11%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));border-radius:16px;padding:10px 10px 11px;min-width:0}
+.stat-h{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:color-mix(in srgb,var(--c) 75%,var(--ink))}
+.stat-v{font:600 15px/1.2 var(--display);margin-top:6px;overflow-wrap:anywhere}
+.stat-d{font:400 11px/1.3 var(--mono);color:var(--muted);margin-top:3px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--surface2);padding:4px;border-radius:14px;margin-top:20px}
+.seg button{border:0;background:transparent;min-height:42px;border-radius:10px;font-weight:600;color:var(--muted)}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg .n{font:500 12px var(--mono);margin-left:4px;opacity:.8}
+.tools{display:flex;gap:8px;margin:14px 0 10px;flex-wrap:wrap}
+.hint{font-size:13px;color:var(--muted);margin:0 0 10px}
+.empty{padding:28px 18px;text-align:center;color:var(--muted);border:1.5px dashed var(--line);border-radius:18px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.empty h2{font:600 19px var(--display);color:var(--ink)}
+.empty p{max-width:30ch}
+
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.tile{position:relative;aspect-ratio:1;border:0;padding:0;border-radius:12px;overflow:hidden;background:var(--surface2)}
+.tile img{width:100%;height:100%;object-fit:cover;display:block}
+.tile .cm{position:absolute;right:5px;bottom:5px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:flex;align-items:center;justify-content:center}
+.tile .idx{position:absolute;left:5px;top:5px;min-width:24px;height:24px;border-radius:12px;background:rgba(0,0,0,.65);color:#fff;font:500 12px/24px var(--mono);text-align:center;padding:0 6px}
+.tile.sel{outline:3px solid var(--accent);outline-offset:-3px}
+.tile.sel img{opacity:.7}
+.tile.on::after{content:"";position:absolute;inset:0;border:3px solid var(--accent);border-radius:12px;background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.tile .chk{position:absolute;right:6px;top:6px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;z-index:1}
+
+/* care log rows */
+.logs{display:flex;flex-direction:column;gap:10px}
+.log{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px;cursor:pointer}
+.log:active{background:var(--surface2)}
+.badge{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--c) 16%,var(--surface));color:color-mix(in srgb,var(--c) 75%,var(--ink))}
+.lhead{font-weight:600}
+.lhead .lplant{font-weight:500;color:var(--muted)}
+.ldate{font:400 12px var(--mono);color:var(--muted);margin-top:1px}
+.lnote{margin-top:6px;overflow-wrap:anywhere;white-space:pre-wrap}
+.lthumbs{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.lt{width:56px;height:56px;border:0;padding:0;border-radius:10px;overflow:hidden;background:var(--surface2)}
+.lt img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* calendar */
+.cal-tools{display:flex;align-items:center;gap:6px;margin-top:4px}
+.cal-month{flex:1;text-align:center;font:600 18px var(--display);letter-spacing:-.01em}
+.sel-plant{width:100%;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:0 12px;margin-top:10px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:14px 0 8px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend b{font:500 13px var(--mono);color:var(--ink)}
+.dot{width:7px;height:7px;border-radius:50%;display:block}
+.d-water{background:var(--water)} .d-fert{background:var(--fert)} .d-event{background:var(--event)}
+.dow,.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.dow{font:500 11px var(--mono);color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.cday{min-height:50px;border-radius:12px;border:1px solid transparent;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:4px 0;font:500 14px var(--mono)}
+.cday.today{border-color:var(--accent);color:var(--accent);font-weight:600}
+.cday.sel{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.cday .dots{display:flex;gap:3px;height:7px}
+.cday.sel .dot{box-shadow:0 0 0 1.5px var(--accent-ink)}
+.day-panel{margin-top:18px}
+.day-panel h2{font:600 18px var(--display);margin-bottom:10px;letter-spacing:-.01em}
+.day-panel .btn{width:100%;margin-top:10px}
+
+/* chrome */
+.fabwrap{position:fixed;left:0;right:0;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:6;pointer-events:none;display:flex;justify-content:center}
+.fabwrap:empty{display:none}
+.fabin{width:100%;max-width:560px;padding:0 16px;display:flex;justify-content:flex-end}
+.fab{pointer-events:auto;min-height:52px;padding:0 22px 0 18px;border-radius:26px;border:0;background:var(--accent);color:var(--accent-ink);display:inline-flex;align-items:center;gap:8px;font:600 15.5px var(--body);box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.fab:active{transform:scale(.97)}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:7;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.nav-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr}
+.nav-b{border:0;background:transparent;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:600;color:var(--muted)}
+.nav-b.on{color:var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));z-index:60;max-width:min(92vw,420px);background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:12px;font-size:14px;font-weight:500;text-align:center}
+
+/* sheets */
+.layer{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center;background:rgba(6,12,8,.55)}
+.sheet{width:100%;max-width:560px;max-height:92dvh;overflow-y:auto;background:var(--surface);border-radius:24px 24px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}.fab:active{transform:none}}
+.sh-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.sh-head h2{font:700 21px var(--display);letter-spacing:-.01em}
+.field{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.field>label,.lab{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.field input,.field textarea,.field select{width:100%;min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:10px 12px;font-size:16px}
+.field textarea{resize:vertical;min-height:84px}
+.hs-row{display:flex;gap:14px;align-items:center}
+.hs-prev{width:92px;height:92px;border-radius:16px;overflow:hidden;background:color-mix(in srgb,var(--accent) 14%,var(--surface));color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none}
+.hs-prev img{width:100%;height:100%;object-fit:cover}
+.hs-btns{display:flex;flex-wrap:wrap;gap:8px}
+.hs-btns .btn{min-height:40px;padding:0 12px;font-size:13.5px}
+.sh-actions{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+.sh-actions .btn.primary{flex:1;min-width:140px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:42px;padding:0 13px 0 10px;border-radius:999px;border:1.5px solid var(--line);background:var(--bg);display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:14px;color:var(--muted)}
+.chip[aria-pressed="true"]{border-color:var(--c);background:color-mix(in srgb,var(--c) 16%,var(--surface));color:color-mix(in srgb,var(--c) 75%,var(--ink))}
+.pstrip{display:flex;flex-wrap:wrap;gap:8px}
+.chip.pl{--c:var(--accent)}
+.pitem{position:relative;width:72px;height:72px;border-radius:12px;overflow:hidden;background:var(--surface2)}
+.pitem img{width:100%;height:100%;object-fit:cover;display:block}
+.pitem button{position:absolute;right:3px;top:3px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.7);color:#fff;display:flex;align-items:center;justify-content:center;padding:0}
+.pitem.new::after{content:"New";position:absolute;left:4px;bottom:4px;font:500 10px var(--mono);background:var(--accent);color:var(--accent-ink);padding:1px 5px;border-radius:6px}
+.pick-grid{margin:10px 0 0}
+
+/* photo viewer */
+.viewer-layer{background:var(--vbg);align-items:stretch;z-index:40}
+.viewer{width:100%;max-width:640px;margin:0 auto;display:flex;flex-direction:column;color:var(--vink);padding-top:env(safe-area-inset-top,0px);height:100%}
+.v-top{display:flex;align-items:center;justify-content:space-between;padding:6px 8px}
+.v-top .icon-btn{color:var(--vink)}
+.v-top .icon-btn.armed{width:auto;padding:0 14px;background:var(--danger);color:#fff;font-weight:600;font-size:14px}
+.v-count{font:500 13px var(--mono);letter-spacing:.04em}
+.v-stage{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
+.v-stage img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.v-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;border:0;background:rgba(0,0,0,.35);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:12px}
+.v-nav.l{left:6px}.v-nav.r{right:6px}
+.v-panel{padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--vline)}
+.v-src{font:400 12px var(--mono);color:#A9B9AD;margin-bottom:8px}
+.v-lab{display:flex;justify-content:space-between;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#A9B9AD;margin-bottom:6px}
+#vNote{width:100%;border-radius:12px;border:1px solid var(--vline);background:var(--vfield);color:var(--vink);padding:10px 12px;font-size:16px;resize:none}
+.v-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.vbtn{min-height:44px;border-radius:12px;border:1px solid var(--vline);background:var(--vfield);color:var(--vink);font-weight:600;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 6px}
+.vbtn:disabled{opacity:.35}
+/* gardens */
+.gph{display:flex;align-items:center;justify-content:center;color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.gcard{display:grid;grid-template-columns:84px minmax(0,1fr);gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px;cursor:pointer}
+.gcard:active{background:var(--surface2)}
+.gstack{position:relative;width:84px;height:52px}
+.gstack img,.gstack .gph{position:absolute;top:2px;width:48px;height:48px;border-radius:50%;border:2.5px solid var(--surface);object-fit:cover;background:var(--surface2)}
+.gstack>:nth-child(1){left:0}.gstack>:nth-child(2){left:18px}.gstack>:nth-child(3){left:36px}
+.gstack .gph{background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.gname{font:600 19px/1.2 var(--display);letter-spacing:-.01em;overflow-wrap:anywhere}
+.gmeta{font:400 12px var(--mono);color:var(--muted);margin-top:3px}
+.gnames{color:var(--muted);font-size:13px;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard{position:relative}
+.pcard.sel{outline:3px solid var(--accent);outline-offset:-3px}
+.gidx{position:absolute;left:6px;top:6px;z-index:1;min-width:26px;height:26px;border-radius:13px;background:rgba(0,0,0,.7);color:#fff;font:500 12px/26px var(--mono);text-align:center;padding:0 7px}
+.alist{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.arow{display:grid;grid-template-columns:48px minmax(0,1fr) 28px;gap:12px;align-items:center;width:100%;text-align:left;background:var(--bg);border:1.5px solid var(--line);border-radius:14px;padding:8px;min-height:62px}
+.arow .at{width:48px;height:48px;border-radius:10px;object-fit:cover;background:var(--surface2)}
+.arow .in{display:block;font-size:12.5px;color:var(--muted)}
+.arow .chkc{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center}
+.arow[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.arow[aria-pressed="true"] .chkc{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip.gd{border-style:dashed}
+.pcard.arr{padding-right:66px}
+.grip{position:absolute;right:8px;top:50%;margin-top:-22px;width:46px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--surface2);color:var(--muted);touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.pcard.dragging{z-index:4;box-shadow:0 12px 30px rgba(0,0,0,.28);outline:2.5px solid var(--accent);outline-offset:-2px;transition:none!important}
+.dragging-list{user-select:none;-webkit-user-select:none}
+.dragging-list .pcard{transition:transform .16s ease}
+@media (prefers-reduced-motion:reduce){.dragging-list .pcard{transition:none}}
+.pnote{margin-top:14px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:16px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px}
+.pnote .lab{margin-bottom:4px}
+.loading{padding:40px 0;text-align:center;color:var(--muted);font:400 13px var(--mono)}
+</style>
+
+<div id="app"></div>
+<div id="fab" class="fabwrap"></div>
+<nav id="nav" class="nav" aria-label="Main"></nav>
+<div id="layers"></div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+(function(){
+'use strict';
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- dates ---------- */
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const today=()=>ymd(new Date());
+const parseD=s=>{const a=String(s).split('-').map(Number);return new Date(a[0],a[1]-1,a[2]);};
+const dayNum=s=>{const a=String(s).split('-').map(Number);return Math.round(Date.UTC(a[0],a[1]-1,a[2])/864e5);};
+const fmtDate=s=>parseD(s).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+const fmtLong=s=>parseD(s).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+function relLower(s){const n=dayNum(today())-dayNum(s);if(n===0)return 'today';if(n===1)return 'yesterday';if(n>1&&n<60)return n+' days ago';return fmtDate(s);}
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+
+/* ---------- icons ---------- */
+const ICON={
+ water:'<path d="M12 3.5s6 6.3 6 10.6a6 6 0 0 1-12 0C6 9.800 12 3.500 12 3.500z"/>',
+ fert:'<path d="M12 21v-9"/><path d="M12 12c0-4 3-6 7-6 0 4-3 6-7 6z"/><path d="M12 14c0-3-2.500-5-6-5 0 3 2.500 5 6 5z"/>',
+ repot:'<path d="M5 9h14l-1.500 10a2 2 0 0 1-2 1.700h-7a2 2 0 0 1-2-1.700L5 9z"/><path d="M12 9V4"/>',
+ prune:'<circle cx="6" cy="6" r="2.500"/><circle cx="6" cy="18" r="2.500"/><path d="M8 7.500L20 18M8 16.500L20 6"/>',
+ mist:'<g fill="currentColor" stroke="none"><circle cx="7" cy="8" r="1.300"/><circle cx="12" cy="5.500" r="1.300"/><circle cx="17" cy="8" r="1.300"/><circle cx="9.500" cy="13" r="1.300"/><circle cx="14.500" cy="13" r="1.300"/><circle cx="12" cy="18" r="1.300"/></g>',
+ pests:'<ellipse cx="12" cy="13" rx="4" ry="5.500"/><path d="M12 7.500V5M8 11H4M16 11h4M8.500 16L5 18M15.500 16l3.500 2M9 4l3 2 3-2"/>',
+ other:'<g fill="currentColor" stroke="none"><circle cx="6" cy="12" r="1.500"/><circle cx="12" cy="12" r="1.500"/><circle cx="18" cy="12" r="1.500"/></g>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ grip:'<g fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.500"/><circle cx="15" cy="6" r="1.500"/><circle cx="9" cy="12" r="1.500"/><circle cx="15" cy="12" r="1.500"/><circle cx="9" cy="18" r="1.500"/><circle cx="15" cy="18" r="1.500"/></g>',
+ back:'<path d="M15 5l-7 7 7 7"/>',
+ chevL:'<path d="M15 5l-7 7 7 7"/>',
+ chevR:'<path d="M9 5l7 7-7 7"/>',
+ edit:'<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.500 6.500l4 4"/>',
+ trash:'<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>',
+ camera:'<path d="M4 8h3l1.500-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.500"/>',
+ close:'<path d="M6 6l12 12M18 6L6 18"/>',
+ arrange:'<path d="M8 4v16M8 4L4.500 7.500M8 4l3.500 3.500M16 20V4M16 20l-3.500-3.500M16 20l3.500-3.500"/>',
+ cal:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+ leaf:'<path d="M5 19c0-8 5-14 15-14 0 9-5 14-13 14"/><path d="M5 19l8-8"/>',
+ chat:'<path d="M5 6h14v9H10l-4 3v-3H5z"/>',
+ check:'<path d="M5 12.500l4.500 4.500L19 7.500"/>',
+ swap:'<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
+ image:'<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.500"/><path d="M5 18l5-5 4 4 2-2 3 3"/>',
+ pin:'<path d="M12 21s6-5.500 6-10a6 6 0 0 0-12 0c0 4.500 6 10 6 10z"/><circle cx="12" cy="11" r="2"/>',
+ sun:'<circle cx="12" cy="12" r="3.500"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.600 5.600l1.400 1.400M17 17l1.400 1.400M5.600 18.400L7 17M17 7l1.400-1.400"/>'
+};
+const ic=(n,sz)=>'<svg class="ic" width="'+(sz||20)+'" height="'+(sz||20)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICON[n]||'')+'</svg>';
+
+/* ---------- care types ---------- */
+const TYPES={
+ water:{label:'Watered',icon:'water',color:'water',kind:'water'},
+ fertilize:{label:'Fertilized',icon:'fert',color:'fert',kind:'fert'},
+ repot:{label:'Repotted',icon:'repot',color:'event',kind:'event'},
+ prune:{label:'Pruned',icon:'prune',color:'event',kind:'event'},
+ mist:{label:'Misted',icon:'mist',color:'event',kind:'event'},
+ pests:{label:'Pest treatment',icon:'pests',color:'event',kind:'event'},
+ other:{label:'Event',icon:'other',color:'event',kind:'event'}
+};
+const TYPE_ORDER=['water','fertilize','repot','prune','mist','pests','other'];
+const tOf=t=>TYPES[t]||TYPES.other;
+
+/* ---------- state ---------- */
+const S={plants:[],photos:[],logs:[],gardens:[],loaded:{plants:false,photos:false,logs:false,gardens:false},
+ view:'plants',pview:'plants',gardenId:null,backTo:null,garrange:false,gsel:null,
+ plantId:null,tab:'gallery',arrange:false,sel:null,
+ calMonth:today().slice(0,7),calDay:today(),calPlant:'all',noDb:false};
+let db=null,A=null,viewerHook=null,lastOrder=0;
+
+const plantById=id=>S.plants.find(p=>p.id===id);
+const photoById=id=>S.photos.find(p=>p.id===id);
+const photosOf=pid=>S.photos.filter(p=>p.plantId===pid).sort((a,b)=>(a.order||0)-(b.order||0));
+const cmpLog=(a,b)=>String(b.date).localeCompare(String(a.date))||(b.createdAt||0)-(a.createdAt||0);
+const logsOf=pid=>S.logs.filter(l=>l.plantId===pid).sort(cmpLog);
+const src=id=>'/_blob/'+encodeURIComponent(id);
+const gardenById=id=>S.gardens.find(g=>g.id===id);
+const gardenOf=p=>(p&&p.gardenId)?gardenById(p.gardenId):null;
+const cmpG=(a,b)=>(a.gorder||0)-(b.gorder||0)||String(a.name||'').localeCompare(String(b.name||''));
+const gardenPlants=gid=>gid==='none'?S.plants.filter(p=>!gardenOf(p)):S.plants.filter(p=>p.gardenId===gid).sort(cmpG);
+function statsFor(pid){
+  const ls=logsOf(pid);
+  return {w:ls.find(l=>l.type==='water'),f:ls.find(l=>l.type==='fertilize'),e:ls.find(l=>l.type!=='water'&&l.type!=='fertilize')};
+}
+
+/* ---------- toast + errors ---------- */
+let toastT;
+function toast(msg,sticky){
+  const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);
+  if(!sticky)toastT=setTimeout(()=>{t.hidden=true},3400);
+  return ()=>{t.hidden=true};
+}
+function errMsg(e){
+  const c=e&&e.code;
+  if(c==='too_large')return 'That photo is too large.';
+  if(c==='unsupported_type')return 'That photo format is not supported. Try JPEG or PNG.';
+  if(c==='quota_or_state')return 'Photo storage is full.';
+  if(c==='rate_limited')return 'Too many uploads at once. Wait a moment and try again.';
+  if(c==='not_granted'||c==='capability_disabled')return 'Saving is not available in this view.';
+  return 'Something went wrong. Please try again.';
+}
+
+/* ---------- images ---------- */
+async function prep(file,max){
+  try{
+    const url=URL.createObjectURL(file);
+    const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url;});
+    const w=img.naturalWidth,h=img.naturalHeight,s=Math.min(1,max/Math.max(w,h));
+    const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*s));c.height=Math.max(1,Math.round(h*s));
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    URL.revokeObjectURL(url);
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.86));
+    if(blob&&blob.size)return blob;
+  }catch(e){}
+  return file;
+}
+async function uploadBlob(blob,orig){
+  if(!A)throw {code:'not_granted'};
+  return A.upload(blob,{type:blob.type||orig.type||'image/jpeg'});
+}
+const nextOrder=()=>{lastOrder=Math.max(Date.now(),lastOrder+1);return lastOrder;};
+async function makePhotoDoc(pid,assetId,extra){
+  extra=extra||{};
+  const ref=db.collection('photos').doc();
+  await ref.set({plantId:pid,asset:assetId,comment:'',order:nextOrder(),createdAt:Date.now(),
+    source:extra.source||'upload',logId:extra.logId||null});
+  return ref.id;
+}
+async function uploadPhoto(pid,file,extra){
+  const blob=await prep(file,1600);
+  const r=await uploadBlob(blob,file);
+  return makePhotoDoc(pid,r.id,extra);
+}
+async function maybeDeleteAsset(id,o){
+  o=o||{};
+  if(!id||!A)return;
+  const used=S.photos.some(p=>p.asset===id&&p.id!==o.exceptPhoto&&!(o.ignorePhotos&&o.ignorePhotos.has(p.id)))
+    ||S.plants.some(p=>p.headshot===id&&p.id!==o.exceptPlant);
+  if(used)return;
+  try{await A.delete(id);}catch(e){}
+}
+
+/* ---------- confirm-by-second-tap ---------- */
+function confirmed(el){
+  if(!el.dataset.confirm||el.dataset.armed)return true;
+  el.dataset.armed='1';el._html=el.innerHTML;el.classList.add('armed');
+  el.textContent=el.dataset.confirm;
+  setTimeout(()=>{if(el.isConnected&&el.dataset.armed){delete el.dataset.armed;el.innerHTML=el._html;el.classList.remove('armed');}},3500);
+  return false;
+}
+
+/* ---------- views ---------- */
+function pillHtml(type,log){
+  const t=tOf(type);
+  let txt;
+  if(type==='water')txt=log?'Watered '+relLower(log.date):'Not watered yet';
+  else if(type==='fertilize')txt=log?'Fertilized '+relLower(log.date):'Not fertilized yet';
+  else txt=log?tOf(log.type).label+' '+relLower(log.date):'No other events';
+  const tt=log&&type!=='water'&&type!=='fertilize'?tOf(log.type):t;
+  return '<span class="pill t-'+tt.color+'">'+ic(tt.icon,14)+'<span>'+esc(txt)+'</span></span>';
+}
+function cardHtml(p,o){
+  o=o||{};
+  const st=statsFor(p.id),pg=o.hideGarden?null:gardenOf(p);
+  return '<li class="pcard'+(o.arrange?' arr':'')+'"'+(o.arrange?'':' data-act="open-plant" role="button" tabindex="0" aria-label="Open '+esc(p.name)+'"')+' data-id="'+p.id+'">'
+   +(o.arrange?'<span class="grip" role="button" tabindex="0" aria-label="Drag to reorder '+esc(p.name)+'. Arrow up and down keys also work.">'+ic('grip',22)+'</span>':'')
+   +(p.headshot?'<img class="thumb" src="'+src(p.headshot)+'" alt="" loading="lazy" decoding="async">':'<div class="thumb ph">'+ic('leaf',32)+'</div>')
+   +'<div class="pbody"><h2 class="pname">'+esc(p.name)+'</h2>'
+   +(p.genus?'<p class="genus">'+esc(p.genus)+'</p>':'')
+   +'<p class="meta">'+(p.location?ic('pin',14)+'<span>'+esc(p.location)+'</span>':'')+'</p>'
+   +(pg?'<p class="meta">'+ic('leaf',14)+'<span>'+esc(pg.name)+'</span></p>':'')
+   +'<div class="pills">'+pillHtml('water',st.w)+pillHtml('fertilize',st.f)+pillHtml('event',st.e)+'</div></div></li>';
+}
+function allPlantsHtml(){
+  if(!S.plants.length){
+    return '<div class="empty">'+ic('leaf',36)+'<h2>No plants yet</h2><p>Add your first plant to start its photo gallery and care log.</p>'
+     +'<button class="btn primary" data-act="add-plant">'+ic('plus')+' Add a plant</button></div>';
+  }
+  return '<ul class="plist">'+S.plants.map(cardHtml).join('')+'</ul>';
+}
+function gardenCardHtml(plants,idForAct,name){
+  const th=plants.slice(0,3);
+  const stack='<div class="gstack">'+(th.length?th.map(p=>p.headshot?'<img src="'+src(p.headshot)+'" alt="" loading="lazy">':'<div class="gph">'+ic('leaf',20)+'</div>').join(''):'<div class="gph">'+ic('leaf',20)+'</div>')+'</div>';
+  const names=th.map(p=>esc(p.name)).join(', ')+(plants.length>3?' +'+(plants.length-3):'');
+  return '<li class="gcard" data-act="open-garden" data-id="'+idForAct+'" role="button" tabindex="0" aria-label="Open '+esc(name)+'">'+stack
+   +'<div class="pbody"><h2 class="gname">'+esc(name)+'</h2><p class="gmeta">'+plants.length+(plants.length===1?' plant':' plants')+'</p>'
+   +(plants.length?'<p class="gnames">'+names+'</p>':'')+'</div></li>';
+}
+function gardensHtml(){
+  if(!S.gardens.length){
+    return '<div class="empty">'+ic('leaf',36)+'<h2>No gardens yet</h2><p>Group plants into gardens, like a balcony or a windowsill, then log care for a whole garden at once.</p>'
+     +'<button class="btn primary" data-act="add-garden">'+ic('plus')+' New garden</button></div>';
+  }
+  const un=gardenPlants('none');
+  return '<ul class="plist">'+S.gardens.map(g=>gardenCardHtml(gardenPlants(g.id),g.id,g.name)).join('')
+    +(un.length?gardenCardHtml(un,'none','Not in a garden'):'')+'</ul>';
+}
+function plantsHtml(){
+  const seg='<div class="seg" role="tablist" style="margin-top:4px"><button role="tab" aria-selected="'+(S.pview==='plants')+'" data-act="pview" data-pv="plants">All plants<span class="n">'+S.plants.length+'</span></button>'
+   +'<button role="tab" aria-selected="'+(S.pview==='gardens')+'" data-act="pview" data-pv="gardens">Gardens<span class="n">'+S.gardens.length+'</span></button></div><div style="height:14px"></div>';
+  return seg+(S.pview==='gardens'?gardensHtml():allPlantsHtml());
+}
+function gardenViewHtml(){
+  const gid=S.gardenId,real=gid!=='none',g=real?gardenById(gid):null;
+  if(real&&!g){S.view='plants';return plantsHtml();}
+  const ps=gardenPlants(gid);
+  let h='<div class="dhead" style="margin-top:4px"><h2 class="dname">'+esc(real?g.name:'Not in a garden')+'</h2><p class="gmeta" style="font-size:13px">'+ps.length+(ps.length===1?' plant':' plants')+'</p></div>';
+  if(real&&g.notes)h+='<div class="pnote"><div class="lab">Notes</div>'+esc(g.notes)+'</div>';
+  if(real){
+    h+='<div class="tools" style="margin-top:14px"><button class="btn" data-act="assign">'+ic('plus')+' Add plants</button>';
+    if(ps.length>1)h+='<button class="btn'+(S.garrange?' on':'')+'" data-act="garrange">'+ic(S.garrange?'check':'arrange')+' '+(S.garrange?'Done':'Arrange')+'</button>';
+    h+='</div>';
+    if(S.garrange)h+='<p class="hint">Press and hold the handle on a plant, then drag it to a new spot.</p>';
+  }else h+='<p class="hint" style="margin-top:10px">These plants are not in a garden yet. Open a garden and use Add plants, or edit a plant to pick its garden.</p>';
+  if(!ps.length)return h+'<div class="empty">'+ic('leaf',34)+'<h2>No plants here yet</h2><p>Add plants to this garden to see them together.</p></div>';
+  return h+'<ul class="plist">'+ps.map((p,i)=>cardHtml(p,{hideGarden:true,arrange:S.garrange&&real,sel:S.gsel===p.id,idx:i+1})).join('')+'</ul>';
+}
+function statTile(label,type,log,isEvent){
+  const t=isEvent&&log?tOf(log.type):tOf(type);
+  const value=log?(isEvent?t.label:cap(relLower(log.date))):'Not yet';
+  const sub=log?(isEvent?relLower(log.date):fmtDate(log.date)):'No entry';
+  return '<div class="stat t-'+t.color+'"><div class="stat-h">'+ic(t.icon,15)+'<span>'+label+'</span></div>'
+    +'<div class="stat-v">'+esc(value)+'</div><div class="stat-d">'+esc(sub)+'</div></div>';
+}
+function galleryHtml(p){
+  const list=photosOf(p.id);
+  let h='<div class="tools">';
+  if(A)h+='<button class="btn" data-act="pick" data-target="galleryInput">'+ic('camera')+' Add photos</button>'
+    +'<input id="galleryInput" type="file" accept="image/*" multiple hidden data-change="add-photos" data-id="'+p.id+'">';
+  if(list.length>1)h+='<button class="btn'+(S.arrange?' on':'')+'" data-act="arrange">'+ic(S.arrange?'check':'arrange')+' '+(S.arrange?'Done':'Arrange')+'</button>';
+  h+='</div>';
+  if(!A)h+='<p class="hint">Uploading is not available in this view.</p>';
+  if(S.arrange)h+='<p class="hint">'+(S.sel?'Now tap the spot where it should go.':'Tap a photo, then tap the spot where it should go.')+'</p>';
+  if(!list.length)return h+'<div class="empty">'+ic('image',34)+'<h2>No photos yet</h2><p>Add photos here. Pictures you attach to a care entry land in this gallery too.</p></div>';
+  h+='<div class="grid">'+list.map((ph,i)=>
+    '<button class="tile'+(S.sel===ph.id?' sel':'')+'" data-act="'+(S.arrange?'arrange-tap':'open-photo')+'" data-id="'+ph.id+'" aria-label="Photo '+(i+1)+(ph.comment?' with note':'')+'">'
+    +'<img src="'+src(ph.asset)+'" alt="" loading="lazy" decoding="async">'
+    +(S.arrange?'<span class="idx">'+(i+1)+'</span>':'')
+    +(ph.comment&&!S.arrange?'<span class="cm">'+ic('chat',12)+'</span>':'')+'</button>').join('')+'</div>';
+  return h;
+}
+function logRowHtml(l,showPlant){
+  const t=tOf(l.type),p=plantById(l.plantId);
+  const th=(l.photoIds||[]).map(photoById).filter(Boolean).slice(0,6);
+  return '<div class="log t-'+t.color+'" data-act="edit-log" data-id="'+l.id+'" role="button" tabindex="0">'
+   +'<span class="badge">'+ic(t.icon,20)+'</span><div class="lbody">'
+   +'<div class="lhead">'+esc(t.label)+(showPlant&&p?' <span class="lplant">· '+esc(p.name)+'</span>':'')+'</div>'
+   +'<div class="ldate">'+esc(fmtLong(l.date))+'</div>'
+   +(l.note?'<p class="lnote">'+esc(l.note)+'</p>':'')
+   +(th.length?'<div class="lthumbs">'+th.map(ph=>'<button class="lt" data-act="open-photo" data-id="'+ph.id+'" aria-label="Open photo"><img src="'+src(ph.asset)+'" alt="" loading="lazy"></button>').join('')+'</div>':'')
+   +'</div></div>';
+}
+function careHtml(p){
+  const ls=logsOf(p.id);
+  if(!ls.length)return '<div class="empty" style="margin-top:14px">'+ic('water',34)+'<h2>Nothing logged yet</h2><p>Tap Log care to record a watering, feeding or repotting.</p></div>';
+  return '<div class="logs" style="margin-top:14px">'+ls.map(l=>logRowHtml(l,false)).join('')+'</div>';
+}
+function detailHtml(p){
+  const st=statsFor(p.id);
+  const days=Math.max(0,dayNum(today())-dayNum(p.adopted||today()));
+  const gc=photosOf(p.id).length,lc=logsOf(p.id).length;
+  return (p.headshot?'<img class="hero" src="'+src(p.headshot)+'" alt="'+esc(p.name)+'" decoding="async">':'<div class="hero ph">'+ic('leaf',56)+'</div>')
+   +'<div class="dhead"><h2 class="dname">'+esc(p.name)+'</h2>'+(p.genus?'<p class="genus" style="font-size:16px">'+esc(p.genus)+'</p>':'')
+   +'<div class="dmeta">'+(p.location?'<span>'+ic('pin',15)+esc(p.location)+'</span>':'')
+   +(gardenOf(p)?'<span>'+ic('leaf',15)+esc(gardenOf(p).name)+'</span>':'')
+   +(p.adopted?'<span>'+ic('cal',15)+'Adopted '+esc(fmtDate(p.adopted))+'</span><span class="mono">Day '+days+'</span>':'')+'</div></div>'
+   +(p.notes?'<div class="pnote"><div class="lab">Notes</div>'+esc(p.notes)+'</div>':'')
+   +'<div class="stats">'+statTile('Watered','water',st.w,false)+statTile('Fertilized','fertilize',st.f,false)+statTile('Last event','other',st.e,true)+'</div>'
+   +'<div class="seg" role="tablist"><button role="tab" aria-selected="'+(S.tab==='gallery')+'" data-act="tab" data-tab="gallery">Gallery<span class="n">'+gc+'</span></button>'
+   +'<button role="tab" aria-selected="'+(S.tab==='care')+'" data-act="tab" data-tab="care">Care log<span class="n">'+lc+'</span></button></div>'
+   +(S.tab==='gallery'?galleryHtml(p):careHtml(p));
+}
+const kindOf=t=>tOf(t).kind;
+function calendarHtml(){
+  const mp=S.calMonth.split('-').map(Number),Y=mp[0],M=mp[1];
+  if(S.calPlant!=='all'){
+    if(S.calPlant.indexOf('g:')===0){if(!gardenById(S.calPlant.slice(2)))S.calPlant='all';}
+    else if(!plantById(S.calPlant))S.calPlant='all';
+  }
+  const ids=S.calPlant==='all'?null:(S.calPlant.indexOf('g:')===0?gardenPlants(S.calPlant.slice(2)).map(p=>p.id):[S.calPlant]);
+  const logs=S.logs.filter(l=>plantById(l.plantId)&&(!ids||ids.indexOf(l.plantId)>=0));
+  const by={};logs.forEach(l=>{(by[l.date]=by[l.date]||[]).push(l);});
+  const startDow=new Date(Y,M-1,1).getDay(),dim=new Date(Y,M,0).getDate(),td=today();
+  const cnt={water:0,fert:0,event:0};
+  logs.forEach(l=>{if(String(l.date).slice(0,7)===S.calMonth)cnt[kindOf(l.type)]++;});
+  let cells='';
+  for(let i=0;i<startDow;i++)cells+='<span></span>';
+  for(let d=1;d<=dim;d++){
+    const ds=Y+'-'+pad(M)+'-'+pad(d),items=by[ds]||[];
+    const kinds=['water','fert','event'].filter(k=>items.some(l=>kindOf(l.type)===k));
+    const names={water:'watered',fert:'fertilized',event:'other care'};
+    cells+='<button class="cday'+(ds===td?' today':'')+(ds===S.calDay?' sel':'')+'" data-act="cal-day" data-day="'+ds+'" aria-label="'+esc(fmtLong(ds))+(kinds.length?', '+kinds.map(k=>names[k]).join(', '):'')+'">'
+      +'<span>'+d+'</span><span class="dots">'+kinds.map(k=>'<i class="dot d-'+k+'"></i>').join('')+'</span></button>';
+  }
+  const label=new Date(Y,M-1,1).toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  let panel='';
+  if(S.calDay){
+    const items=(by[S.calDay]||[]).slice().sort(cmpLog);
+    panel='<div class="day-panel"><h2>'+esc(fmtLong(S.calDay))+'</h2>'
+     +(items.length?'<div class="logs">'+items.map(l=>logRowHtml(l,true)).join('')+'</div>':'<p class="hint">No care logged on this day.</p>')
+     +(S.plants.length?'<button class="btn" data-act="log-day">'+ic('plus')+' Log care for this day</button>':'')+'</div>';
+  }else panel='<p class="hint" style="margin-top:16px">Tap a day to see what happened.</p>';
+  const dows=['S','M','T','W','T','F','S'].map(x=>'<span>'+x+'</span>').join('');
+  return '<select id="calPlant" class="sel-plant" data-change="cal-plant" aria-label="Show plants or garden">'
+   +'<option value="all"'+(S.calPlant==='all'?' selected':'')+'>All plants</option>'
+   +(S.gardens.length?'<optgroup label="Gardens">'+S.gardens.map(g=>'<option value="g:'+g.id+'"'+(S.calPlant==='g:'+g.id?' selected':'')+'>'+esc(g.name)+' ('+gardenPlants(g.id).length+')</option>').join('')+'</optgroup>':'')
+   +'<optgroup label="Plants">'+S.plants.map(p=>'<option value="'+p.id+'"'+(S.calPlant===p.id?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</optgroup></select>'
+   +'<div class="cal-tools" style="margin-top:14px"><button class="icon-btn" data-act="cal-prev" aria-label="Previous month">'+ic('chevL')+'</button>'
+   +'<div class="cal-month">'+esc(label)+'</div><button class="icon-btn" data-act="cal-next" aria-label="Next month">'+ic('chevR')+'</button></div>'
+   +'<div class="legend"><span><i class="dot d-water"></i>Watered <b>'+cnt.water+'</b></span><span><i class="dot d-fert"></i>Fertilized <b>'+cnt.fert+'</b></span><span><i class="dot d-event"></i>Other <b>'+cnt.event+'</b></span>'
+   +(S.calMonth!==today().slice(0,7)?'<button class="btn" style="min-height:32px;padding:0 10px;font-size:12.5px;margin-left:auto" data-act="cal-today">This month</button>':'')+'</div>'
+   +'<div class="dow" aria-hidden="true">'+dows+'</div><div class="cal">'+cells+'</div>'+panel;
+}
+function headerHtml(ready){
+  if(S.view==='garden'){
+    const real=S.gardenId!=='none',g=real?gardenById(S.gardenId):null;
+    return '<header class="top"><button class="icon-btn" data-act="back-garden" aria-label="Back to gardens">'+ic('back',22)+'</button>'
+     +'<h1 class="top-title">'+esc(real&&g?g.name:'Not in a garden')+'</h1>'
+     +(real&&g?'<button class="icon-btn" data-act="edit-garden" data-id="'+g.id+'" aria-label="Edit garden">'+ic('edit')+'</button>':'')+'</header>';
+  }
+  if(S.view==='detail'&&plantById(S.plantId)){
+    const p=plantById(S.plantId);
+    return '<header class="top"><button class="icon-btn" data-act="back" aria-label="Back to plants">'+ic('back',22)+'</button>'
+     +'<h1 class="top-title">'+esc(p.name)+'</h1><button class="icon-btn" data-act="edit-plant" data-id="'+p.id+'" aria-label="Edit plant">'+ic('edit')+'</button></header>';
+  }
+  if(S.view==='calendar')return '<header class="top"><div><h1 class="top-title big">Care calendar</h1></div></header>';
+  return '<header class="top"><div><h1 class="top-title big">Vikie’s plants</h1>'
+   +(ready?'<p class="sub">'+S.plants.length+(S.plants.length===1?' plant':' plants')+'</p>':'')+'</div>'
+   +(ready&&!S.noDb?'<button class="btn" style="min-height:40px;padding:0 14px" data-act="'+(S.pview==='gardens'?'add-garden':'add-plant')+'">'+ic('plus',18)+(S.pview==='gardens'?' New garden':' Add plant')+'</button>':'')+'</header>';
+}
+function render(){
+  if(S.dragging)return;
+  const ready=S.loaded.plants&&S.loaded.photos&&S.loaded.logs&&S.loaded.gardens;
+  let body;
+  if(S.noDb)body='<div class="empty">'+ic('leaf',34)+'<h2>Saving is not available</h2><p>Open this page from claude.ai while signed in to see and add your plants.</p></div>';
+  else if(!ready)body='<p class="loading">Loading your plants…</p>';
+  else if(S.view==='calendar')body=calendarHtml();
+  else if(S.view==='garden')body=gardenViewHtml();
+  else if(S.view==='detail'&&plantById(S.plantId))body=detailHtml(plantById(S.plantId));
+  else{S.view='plants';body=plantsHtml();}
+  $('#app').innerHTML=headerHtml(ready)+'<main>'+body+'</main>';
+  let fab='';
+  if(ready&&!S.noDb){
+    if(S.view==='plants'&&S.plants.length)fab='<button class="fab" data-act="log-main">'+ic('water',22)+' Log care</button>';
+    else if(S.view==='garden'&&gardenPlants(S.gardenId).length)fab='<button class="fab" data-act="log-garden">'+ic('water',22)+' Log care</button>';
+    else if(S.view==='detail')fab='<button class="fab" data-act="log-care">'+ic('water',22)+' Log care</button>';
+  }
+  $('#fab').innerHTML=fab?'<div class="fabin">'+fab+'</div>':'';
+  const calOn=S.view==='calendar';
+  $('#nav').innerHTML='<div class="nav-in"><button class="nav-b'+(calOn?'':' on')+'" data-act="nav" data-to="plants"'+(calOn?'':' aria-current="page"')+'>'+ic('leaf',22)+'Plants</button>'
+   +'<button class="nav-b'+(calOn?' on':'')+'" data-act="nav" data-to="calendar"'+(calOn?' aria-current="page"':'')+'>'+ic('cal',22)+'Calendar</button></div>';
+}
+
+/* ---------- layers ---------- */
+const layers=$('#layers');
+function pushLayer(cls,html){
+  const el=document.createElement('div');
+  el.className='layer '+(cls||'');el.innerHTML=html;layers.appendChild(el);
+  document.body.style.overflow='hidden';
+  el._close=()=>closeLayer(el);
+  return el;
+}
+function closeLayer(el){
+  el.remove();
+  if(!layers.children.length)document.body.style.overflow='';
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&layers.lastElementChild){e.preventDefault();layers.lastElementChild._close();return;}
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[role="button"][data-act]')){e.preventDefault();e.target.click();}
+});
+
+/* ---------- gallery picker ---------- */
+function openPicker(o){
+  const list=photosOf(o.plantId),sel=new Set(o.selected||[]);
+  const el=pushLayer('','<div class="sheet" role="dialog" aria-modal="true" aria-label="'+esc(o.title)+'"><div class="sh-head"><h2>'+esc(o.title)+'</h2>'
+    +'<button class="icon-btn" data-s="close" aria-label="Close">'+ic('close')+'</button></div>'
+    +(list.length?'<div class="grid pick-grid" id="pkGrid"></div>':'<p class="hint">This plant has no photos yet.</p>')
+    +'<div class="sh-actions"><button class="btn primary" data-s="done">Done</button></div></div>');
+  const paint=()=>{const g=el.querySelector('#pkGrid');if(!g)return;
+    g.innerHTML=list.map((ph,i)=>'<button class="tile'+(sel.has(ph.id)?' on':'')+'" data-s="tog" data-id="'+ph.id+'" aria-pressed="'+sel.has(ph.id)+'" aria-label="Photo '+(i+1)+'"><img src="'+src(ph.asset)+'" alt="">'
+      +(sel.has(ph.id)?'<span class="chk">'+ic('check',14)+'</span>':'')+'</button>').join('');};
+  paint();
+  el.addEventListener('click',e=>{
+    if(e.target===el){el._close();return;}
+    const b=e.target.closest('[data-s]');if(!b)return;
+    if(b.dataset.s==='close')el._close();
+    else if(b.dataset.s==='tog'){const id=b.dataset.id;
+      if(o.multi){sel.has(id)?sel.delete(id):sel.add(id);}else{sel.clear();sel.add(id);}
+      paint();}
+    else if(b.dataset.s==='done'){o.onDone([...sel]);el._close();}
+  });
+}
+
+/* ---------- plant sheet ---------- */
+function openPlantSheet(id){
+  const p=id?plantById(id):null;
+  const st={file:null,preview:null,asset:p?p.headshot||null:null};
+  const locs=[...new Set(S.plants.map(x=>x.location).filter(Boolean))];
+  const el=pushLayer('','<div class="sheet" role="dialog" aria-modal="true" aria-label="'+(p?'Edit plant':'New plant')+'">'
+   +'<div class="sh-head"><h2>'+(p?'Edit plant':'New plant')+'</h2><button class="icon-btn" data-s="close" aria-label="Close">'+ic('close')+'</button></div>'
+   +'<form id="plantForm" autocomplete="off" novalidate>'
+   +'<div class="hs-row"><div class="hs-prev" id="hsPrev"></div><div class="hs-btns" id="hsBtns"></div></div>'
+   +'<input id="hsInput" type="file" accept="image/*" hidden>'
+   +'<div class="field"><label for="fName">Name</label><input id="fName" type="text" maxlength="80" placeholder="e.g. Big Monty" value="'+esc(p?p.name:'')+'"></div>'
+   +'<div class="field"><label for="fGenus">Genus</label><input id="fGenus" type="text" maxlength="80" placeholder="e.g. Monstera" value="'+esc(p?p.genus||'':'')+'"></div>'
+   +'<div class="field"><label for="fDate">Date adopted</label><input id="fDate" type="date" value="'+esc(p?p.adopted||today():today())+'"></div>'
+   +'<div class="field"><label for="fLoc">Location</label><input id="fLoc" type="text" maxlength="80" list="locList" placeholder="e.g. Living room window" value="'+esc(p?p.location||'':'')+'">'
+   +'<datalist id="locList">'+locs.map(l=>'<option value="'+esc(l)+'">').join('')+'</datalist></div>'
+   +(S.gardens.length?'<div class="field"><label for="fGarden">Garden</label><select id="fGarden"><option value="">No garden</option>'
+     +S.gardens.map(g=>'<option value="'+g.id+'"'+(p&&p.gardenId===g.id?' selected':'')+'>'+esc(g.name)+'</option>').join('')+'</select></div>':'')
+   +'<div class="field"><label for="fNotes">Notes</label><textarea id="fNotes" maxlength="2000" placeholder="Watering needs, quirks, where you got it…">'+esc(p?p.notes||'':'')+'</textarea></div>'
+   +'<div class="sh-actions"><button type="submit" class="btn primary" id="fSave">'+(p?'Save changes':'Add plant')+'</button>'
+   +(p?'<button type="button" class="btn danger" data-s="delete" data-confirm="Tap again to delete">'+ic('trash')+' Delete</button>':'')+'</div></form></div>');
+  const q=s=>el.querySelector(s);
+  const paint=()=>{
+    const u=st.preview||(st.asset?src(st.asset):null);
+    q('#hsPrev').innerHTML=u?'<img src="'+u+'" alt="Headshot preview">':ic('leaf',34);
+    q('#hsBtns').innerHTML=(A?'<button type="button" class="btn" data-s="choose">'+ic('camera',18)+' '+(u?'Change photo':'Add photo')+'</button>':'')
+      +(p&&photosOf(p.id).length?'<button type="button" class="btn" data-s="fromgal">'+ic('image',18)+' From gallery</button>':'')
+      +(u?'<button type="button" class="btn" data-s="clear">Remove</button>':'');
+  };
+  paint();
+  q('#hsInput').addEventListener('change',e=>{
+    const f=e.target.files[0];e.target.value='';if(!f)return;
+    if(st.preview)URL.revokeObjectURL(st.preview);
+    st.file=f;st.preview=URL.createObjectURL(f);paint();
+  });
+  el.addEventListener('click',async e=>{
+    const b=e.target.closest('[data-s]');if(!b)return;
+    const a=b.dataset.s;
+    if(a==='close'){if(st.preview)URL.revokeObjectURL(st.preview);el._close();}
+    else if(a==='choose')q('#hsInput').click();
+    else if(a==='clear'){if(st.preview)URL.revokeObjectURL(st.preview);st.file=null;st.preview=null;st.asset=null;paint();}
+    else if(a==='fromgal'){
+      openPicker({plantId:p.id,title:'Choose a headshot',multi:false,selected:[],onDone:ids=>{
+        const ph=photoById(ids[0]);if(!ph)return;
+        if(st.preview)URL.revokeObjectURL(st.preview);
+        st.file=null;st.preview=null;st.asset=ph.asset;paint();}});
+    }
+    else if(a==='delete'){
+      if(!confirmed(b))return;
+      b.disabled=true;
+      const done=toast('Deleting plant…',true);
+      try{await deletePlant(p);done();el._close();S.view='plants';S.plantId=null;render();toast('Plant deleted.');}
+      catch(err){done();b.disabled=false;toast(errMsg(err));}
+    }
+  });
+  q('#plantForm').addEventListener('submit',async ev=>{
+    ev.preventDefault();
+    const name=q('#fName').value.trim();
+    if(!name){q('#fName').focus();toast('Give your plant a name.');return;}
+    const btn=q('#fSave');btn.disabled=true;btn.textContent='Saving…';
+    try{
+      let asset=st.asset;
+      if(st.file){const blob=await prep(st.file,900);const r=await uploadBlob(blob,st.file);asset=r.id;}
+      const gSel=q('#fGarden'),gid=gSel?(gSel.value||null):(p?(p.gardenId||null):null);
+      const data={name:name,genus:q('#fGenus').value.trim(),adopted:q('#fDate').value||today(),location:q('#fLoc').value.trim(),headshot:asset||null,gardenId:gid,notes:q('#fNotes').value.trim()};
+      if(!p||(p.gardenId||null)!==gid)data.gorder=nextOrder();
+      let newId=null;
+      if(p){
+        await db.doc('plants/'+p.id).update(data);
+        const old=p.headshot;Object.assign(p,data);
+        if(old&&old!==asset)await maybeDeleteAsset(old,{exceptPlant:p.id});
+      }else{
+        const ref=db.collection('plants').doc();
+        await ref.set(Object.assign({createdAt:Date.now()},data));
+        newId=ref.id;
+      }
+      if(st.preview)URL.revokeObjectURL(st.preview);
+      el._close();
+      if(newId){S.view='detail';S.plantId=newId;S.tab='gallery';S.arrange=false;S.sel=null;window.scrollTo(0,0);}
+      render();
+      toast(p?'Plant updated.':'Plant added.');
+    }catch(err){btn.disabled=false;btn.textContent=p?'Save changes':'Add plant';toast(errMsg(err));}
+  });
+}
+async function deletePlant(p){
+  const photos=photosOf(p.id),logs=logsOf(p.id);
+  const ids=new Set(photos.map(x=>x.id));
+  const assets=new Set(photos.map(x=>x.asset));if(p.headshot)assets.add(p.headshot);
+  await db.doc('plants/'+p.id).delete();
+  for(const l of logs)await db.doc('logs/'+l.id).delete();
+  for(const ph of photos)await db.doc('photos/'+ph.id).delete();
+  S.plants=S.plants.filter(x=>x.id!==p.id);
+  for(const a of assets)await maybeDeleteAsset(a,{ignorePhotos:ids,exceptPlant:p.id});
+}
+
+/* ---------- log sheet ---------- */
+function openLogSheet(o){
+  const l=o.logId?S.logs.find(x=>x.id===o.logId):null;
+  const fixedPlant=l?l.plantId:o.plantId||null;
+  let preset=(o.plantIds&&o.plantIds.length)?o.plantIds.filter(id=>!!plantById(id)):null;
+  if(!preset){
+    if(o.main)preset=S.plants.length===1?[S.plants[0].id]:[];
+    else if(S.calPlant.indexOf('g:')===0)preset=gardenPlants(S.calPlant.slice(2)).map(p=>p.id);
+    else if(S.calPlant!=='all'&&plantById(S.calPlant))preset=[S.calPlant];
+    else preset=S.plants.length===1?[S.plants[0].id]:[];
+  }
+  const st={plantIds:new Set(fixedPlant?[fixedPlant]:preset),
+    type:l?l.type:'water',existing:l?(l.photoIds||[]).filter(photoById):[],files:[]};
+  const el=pushLayer('','<div class="sheet" role="dialog" aria-modal="true" aria-label="'+(l?'Edit care entry':'Log care')+'">'
+   +'<div class="sh-head"><h2>'+(l?'Edit entry':'Log care')+'</h2><button class="icon-btn" data-s="close" aria-label="Close">'+ic('close')+'</button></div>'
+   +'<form id="logForm" autocomplete="off" novalidate>'
+   +(fixedPlant?'':'<div class="field"><span class="lab">Plants</span><div class="chips" id="lPlants" role="group" aria-label="Plants"></div></div>')
+   +'<div class="field"><span class="lab">What did you do?</span><div class="chips" id="lTypes" role="group" aria-label="Care type"></div></div>'
+   +'<div class="field"><label for="lDate">Date</label><input id="lDate" type="date" value="'+esc(l?l.date:(o.date||today()))+'"></div>'
+   +'<div class="field"><label for="lNote">Note (optional)</label><textarea id="lNote" maxlength="1000" placeholder="e.g. Half a litre, drained well">'+esc(l?l.note||'':'')+'</textarea></div>'
+   +'<div class="field"><span class="lab">Photos (optional)</span><div class="pstrip" id="lPhotos"></div>'
+   +'<div class="hs-btns" id="lPhotoBtns"></div></div>'
+   +'<input id="lFile" type="file" accept="image/*" multiple hidden>'
+   +'<div class="sh-actions"><button type="submit" class="btn primary" id="lSave">'+(l?'Save changes':'Save entry')+'</button>'
+   +(l?'<button type="button" class="btn danger" data-s="delete" data-confirm="Tap again to delete">'+ic('trash')+' Delete</button>':'')+'</div>'
+   +(l?'<p class="hint" style="margin-top:10px">Deleting an entry keeps its photos in the gallery.</p>':'')+'</form></div>');
+  const q=s=>el.querySelector(s);
+  const selIds=()=>S.plants.map(p=>p.id).filter(id=>st.plantIds.has(id));
+  const curPlant=()=>selIds().length===1?selIds()[0]:null;
+  const paint=()=>{
+    if(!fixedPlant){
+      const all=S.plants.length>1&&selIds().length===S.plants.length;
+      q('#lPlants').innerHTML=(S.plants.length>1?'<button type="button" class="chip pl" data-s="pl-all" aria-pressed="'+all+'">'+ic('leaf',17)+'All plants</button>':'')
+        +S.gardens.filter(g=>gardenPlants(g.id).length).map(g=>{
+          const gids=gardenPlants(g.id).map(p=>p.id),on=gids.every(id=>st.plantIds.has(id));
+          return '<button type="button" class="chip pl gd" data-s="pg" data-id="'+g.id+'" aria-pressed="'+on+'">'+ic('sun',17)+esc(g.name)+'</button>';}).join('')
+        +S.plants.map(p=>'<button type="button" class="chip pl" data-s="pl" data-id="'+p.id+'" aria-pressed="'+st.plantIds.has(p.id)+'">'+esc(p.name)+'</button>').join('');
+    }
+    if(!l){const n=selIds().length;q('#lSave').textContent=n>1?'Save for '+n+' plants':'Save entry';}
+    q('#lTypes').innerHTML=TYPE_ORDER.map(k=>{const t=TYPES[k];
+      return '<button type="button" class="chip t-'+t.color+'" data-s="type" data-k="'+k+'" aria-pressed="'+(st.type===k)+'">'+ic(t.icon,17)+(k==='other'?'Other':t.label.replace('Watered','Water').replace('Fertilized','Fertilize').replace('Repotted','Repot').replace('Pruned','Prune').replace('Misted','Mist'))+'</button>';}).join('');
+    q('#lPhotos').innerHTML=st.existing.map(id=>{const ph=photoById(id);return ph?'<div class="pitem"><img src="'+src(ph.asset)+'" alt=""><button type="button" data-s="rm-ex" data-id="'+id+'" aria-label="Remove photo from entry">'+ic('close',14)+'</button></div>':'';}).join('')
+      +st.files.map((f,i)=>'<div class="pitem new"><img src="'+f.url+'" alt=""><button type="button" data-s="rm-new" data-i="'+i+'" aria-label="Remove new photo">'+ic('close',14)+'</button></div>').join('');
+    const hasGal=!!curPlant()&&photosOf(curPlant()).length>0;
+    q('#lPhotoBtns').innerHTML=(A?'<button type="button" class="btn" data-s="upload">'+ic('camera',18)+' Upload</button>':'')
+      +(hasGal?'<button type="button" class="btn" data-s="gallery">'+ic('image',18)+' From gallery</button>':'');
+  };
+  paint();
+  q('#lFile').addEventListener('change',e=>{
+    [...e.target.files].forEach(f=>st.files.push({file:f,url:URL.createObjectURL(f)}));
+    e.target.value='';paint();
+  });
+  const cleanup=()=>st.files.forEach(f=>URL.revokeObjectURL(f.url));
+  el.addEventListener('click',async e=>{
+    const b=e.target.closest('[data-s]');if(!b)return;
+    const a=b.dataset.s;
+    if(a==='close'){cleanup();el._close();}
+    else if(a==='type'){st.type=b.dataset.k;paint();}
+    else if(a==='pl'){const id=b.dataset.id;if(st.plantIds.has(id))st.plantIds.delete(id);else st.plantIds.add(id);st.existing=[];paint();}
+    else if(a==='pl-all'){if(selIds().length===S.plants.length)st.plantIds.clear();else S.plants.forEach(p=>st.plantIds.add(p.id));st.existing=[];paint();}
+    else if(a==='pg'){
+      const gids=gardenPlants(b.dataset.id).map(p=>p.id);
+      if(gids.every(id=>st.plantIds.has(id)))gids.forEach(id=>st.plantIds.delete(id));else gids.forEach(id=>st.plantIds.add(id));
+      st.existing=[];paint();
+    }
+    else if(a==='upload')q('#lFile').click();
+    else if(a==='rm-ex'){st.existing=st.existing.filter(x=>x!==b.dataset.id);paint();}
+    else if(a==='rm-new'){const i=+b.dataset.i;URL.revokeObjectURL(st.files[i].url);st.files.splice(i,1);paint();}
+    else if(a==='gallery'){
+      openPicker({plantId:curPlant(),title:'Choose from gallery',multi:true,selected:st.existing,onDone:ids=>{st.existing=ids;paint();}});
+    }
+    else if(a==='delete'){
+      if(!confirmed(b))return;
+      try{await db.doc('logs/'+l.id).delete();S.logs=S.logs.filter(x=>x.id!==l.id);cleanup();el._close();render();toast('Entry deleted.');}
+      catch(err){toast(errMsg(err));}
+    }
+  });
+  q('#logForm').addEventListener('submit',async ev=>{
+    ev.preventDefault();
+    const pids=fixedPlant?[fixedPlant]:selIds(),date=q('#lDate').value;
+    if(!pids.length){toast('Pick at least one plant.');return;}
+    if(!date){q('#lDate').focus();toast('Pick a date.');return;}
+    const btn=q('#lSave');btn.disabled=true;btn.textContent='Saving…';
+    let done=null;
+    try{
+      const assets=[];
+      for(let i=0;i<st.files.length;i++){
+        done=toast('Uploading photo '+(i+1)+' of '+st.files.length+'…',true);
+        const blob=await prep(st.files[i].file,1600);
+        assets.push((await uploadBlob(blob,st.files[i].file)).id);
+      }
+      if(done)done();
+      const note=q('#lNote').value.trim();
+      for(const pid of pids){
+        const ref=(l&&pid===l.plantId)?db.doc('logs/'+l.id):db.collection('logs').doc();
+        const photoIds=pids.length===1?st.existing.slice():[];
+        for(const aid of assets)photoIds.push(await makePhotoDoc(pid,aid,{source:'log',logId:ref.id}));
+        await ref.set({plantId:pid,type:st.type,date:date,note:note,photoIds:photoIds,createdAt:l?(l.createdAt||Date.now()):Date.now()});
+      }
+      cleanup();el._close();
+      if(S.view==='calendar'){S.calDay=date;S.calMonth=date.slice(0,7);}
+      render();toast(l?'Entry updated.':(pids.length>1?'Logged for '+pids.length+' plants.':'Logged.'));
+    }catch(err){
+      if(done)done();
+      btn.disabled=false;
+      if(l)btn.textContent='Save changes';else paint();
+      toast(errMsg(err));
+    }
+  });
+}
+
+/* ---------- gardens ---------- */
+function openAssignSheet(gid){
+  const g=gardenById(gid);if(!g)return;
+  const sel=new Set(S.plants.filter(p=>p.gardenId===gid).map(p=>p.id));
+  const el=pushLayer('','<div class="sheet" role="dialog" aria-modal="true" aria-label="Plants in '+esc(g.name)+'">'
+   +'<div class="sh-head"><h2>Plants in '+esc(g.name)+'</h2><button class="icon-btn" data-s="close" aria-label="Close">'+ic('close')+'</button></div>'
+   +(S.plants.length?'<p class="hint">Tick the plants that belong here. A plant from another garden moves over. Unticking takes a plant out.</p><div class="alist" id="aList"></div>':'<p class="hint">Add a plant first, then group it here.</p>')
+   +'<div class="sh-actions"><button class="btn primary" data-s="done">Save</button></div></div>');
+  const paint=()=>{
+    const l=el.querySelector('#aList');if(!l)return;
+    l.innerHTML=S.plants.map(p=>{
+      const og=gardenOf(p),other=og&&og.id!==gid;
+      return '<button type="button" class="arow" data-s="tog" data-id="'+p.id+'" aria-pressed="'+sel.has(p.id)+'">'
+       +(p.headshot?'<img class="at" src="'+src(p.headshot)+'" alt="">':'<span class="at gph">'+ic('leaf',20)+'</span>')
+       +'<span class="pbody"><span class="pname" style="font-size:16px;display:block">'+esc(p.name)+'</span>'
+       +(other?'<span class="in">Now in '+esc(og.name)+'</span>':(p.genus?'<span class="in" style="font-style:italic">'+esc(p.genus)+'</span>':''))+'</span>'
+       +'<span class="chkc">'+(sel.has(p.id)?ic('check',15):'')+'</span></button>';
+    }).join('');
+  };
+  paint();
+  el.addEventListener('click',async e=>{
+    const b=e.target.closest('[data-s]');if(!b)return;
+    if(b.dataset.s==='close')el._close();
+    else if(b.dataset.s==='tog'){const id=b.dataset.id;if(sel.has(id))sel.delete(id);else sel.add(id);paint();}
+    else if(b.dataset.s==='done'){
+      b.disabled=true;b.textContent='Saving…';
+      try{
+        for(const p of S.plants.slice()){
+          const want=sel.has(p.id),inG=p.gardenId===gid;
+          if(want&&!inG){const o=nextOrder();await db.doc('plants/'+p.id).update({gardenId:gid,gorder:o});p.gardenId=gid;p.gorder=o;}
+          else if(!want&&inG){await db.doc('plants/'+p.id).update({gardenId:null});p.gardenId=null;}
+        }
+        el._close();render();toast('Garden updated.');
+      }catch(err){b.disabled=false;b.textContent='Save';toast(errMsg(err));}
+    }
+  });
+}
+function openGardenSheet(id){
+  const g=id?gardenById(id):null;
+  const el=pushLayer('','<div class="sheet" role="dialog" aria-modal="true" aria-label="'+(g?'Edit garden':'New garden')+'">'
+   +'<div class="sh-head"><h2>'+(g?'Edit garden':'New garden')+'</h2><button class="icon-btn" data-s="close" aria-label="Close">'+ic('close')+'</button></div>'
+   +'<form id="gForm" autocomplete="off" novalidate><div class="field"><label for="gName">Name</label>'
+   +'<input id="gName" type="text" maxlength="60" placeholder="e.g. Balcony" value="'+esc(g?g.name:'')+'"></div>'
+   +'<div class="field"><label for="gNotes">Notes</label><textarea id="gNotes" maxlength="2000" placeholder="Light, watering rhythm, anything about this garden…">'+esc(g?g.notes||'':'')+'</textarea></div>'
+   +'<div class="sh-actions"><button type="submit" class="btn primary" id="gSave">'+(g?'Save changes':'Create garden')+'</button>'
+   +(g?'<button type="button" class="btn danger" data-s="delete" data-confirm="Tap again to delete">'+ic('trash')+' Delete</button>':'')+'</div>'
+   +(g?'<p class="hint" style="margin-top:10px">Deleting a garden keeps its plants. They just are not in a garden any more.</p>':'')+'</form></div>');
+  const q=s=>el.querySelector(s);
+  el.addEventListener('click',async e=>{
+    const b=e.target.closest('[data-s]');if(!b)return;
+    if(b.dataset.s==='close')el._close();
+    else if(b.dataset.s==='delete'){
+      if(!confirmed(b))return;
+      b.disabled=true;
+      try{
+        for(const p of S.plants.filter(x=>x.gardenId===g.id)){await db.doc('plants/'+p.id).update({gardenId:null});p.gardenId=null;}
+        await db.doc('gardens/'+g.id).delete();
+        S.gardens=S.gardens.filter(x=>x.id!==g.id);
+        el._close();
+        if(S.view==='garden'){S.gardenId=null;S.pview='gardens';gotoView('plants');}else render();
+        toast('Garden deleted.');
+      }catch(err){b.disabled=false;toast(errMsg(err));}
+    }
+  });
+  q('#gForm').addEventListener('submit',async ev=>{
+    ev.preventDefault();
+    const name=q('#gName').value.trim();
+    if(!name){q('#gName').focus();toast('Give the garden a name.');return;}
+    const btn=q('#gSave');btn.disabled=true;btn.textContent='Saving…';
+    try{
+      const notes=q('#gNotes').value.trim();
+      if(g){await db.doc('gardens/'+g.id).update({name:name,notes:notes});g.name=name;g.notes=notes;el._close();render();toast('Garden updated.');}
+      else{
+        const ref=db.collection('gardens').doc();
+        await ref.set({name:name,notes:notes,createdAt:Date.now()});
+        el._close();S.gardenId=ref.id;S.pview='gardens';gotoView('garden');toast('Garden created.');
+      }
+    }catch(err){btn.disabled=false;btn.textContent=g?'Save changes':'Create garden';toast(errMsg(err));}
+  });
+}
+async function movePlant(gid,id,toIndex){
+  const list=gardenPlants(gid).slice();
+  const from=list.findIndex(p=>p.id===id);
+  if(from<0||toIndex<0||toIndex>=list.length||from===toIndex)return;
+  const item=list.splice(from,1)[0];
+  list.splice(toIndex,0,item);
+  const prev=list[toIndex-1],next=list[toIndex+1];
+  try{
+    if(prev&&next&&Math.abs((next.gorder||0)-(prev.gorder||0))<1e-6){
+      for(let i=0;i<list.length;i++){
+        if(list[i].gorder!==(i+1)*1024){list[i].gorder=(i+1)*1024;await db.doc('plants/'+list[i].id).update({gorder:list[i].gorder});}
+      }
+    }else{
+      let o;
+      if(!prev)o=(next.gorder||0)-1024;else if(!next)o=(prev.gorder||0)+1024;else o=((prev.gorder||0)+(next.gorder||0))/2;
+      item.gorder=o;
+      render();
+      await db.doc('plants/'+id).update({gorder:o});
+    }
+    render();
+  }catch(err){toast('Could not save the new order.');}
+}
+
+/* ---------- photo viewer ---------- */
+function openViewer(startId){
+  const first=photoById(startId);if(!first)return;
+  const pid=first.plantId;let cur=startId;
+  const el=pushLayer('viewer-layer','<div class="viewer" role="dialog" aria-modal="true" aria-label="Photo viewer">'
+   +'<div class="v-top"><button class="icon-btn" data-v="close" aria-label="Close">'+ic('close',22)+'</button><span class="v-count" id="vCount"></span>'
+   +'<button class="icon-btn" data-v="delete" data-confirm="Tap again to delete" aria-label="Delete photo">'+ic('trash',20)+'</button></div>'
+   +'<div class="v-stage" id="vStage"><button class="v-nav l" data-v="prev" aria-label="Previous photo">'+ic('chevL',24)+'</button><img id="vImg" alt="">'
+   +'<button class="v-nav r" data-v="next" aria-label="Next photo">'+ic('chevR',24)+'</button></div>'
+   +'<div class="v-panel"><p class="v-src" id="vSrc"></p>'
+   +'<div class="v-lab"><label for="vNote">Note</label><span id="vSaved"></span></div>'
+   +'<textarea id="vNote" rows="2" maxlength="1000" placeholder="Add a note about this photo"></textarea>'
+   +'<div class="v-actions"><button class="vbtn" data-v="earlier">'+ic('chevL',16)+' Earlier</button>'
+   +(A?'<button class="vbtn" data-v="replace">'+ic('swap',16)+' Replace</button>':'<span></span>')
+   +'<button class="vbtn" data-v="later">Later '+ic('chevR',16)+'</button></div>'
+   +'<input id="vFile" type="file" accept="image/*" hidden></div></div>');
+  const q=s=>el.querySelector(s);
+  const note=q('#vNote');
+  const list=()=>photosOf(pid);
+  function paint(full){
+    const L=list();
+    if(!L.length){close();return;}
+    let i=L.findIndex(p=>p.id===cur);
+    if(i<0){cur=L[0].id;i=0;full=true;}
+    const ph=L[i];
+    q('#vCount').textContent=(i+1)+' / '+L.length;
+    const img=q('#vImg'),s=src(ph.asset);
+    if(img.getAttribute('src')!==s)img.src=s;
+    if(full){note.value=ph.comment||'';q('#vSaved').textContent='';}
+    let from='Uploaded '+fmtDate(ymd(new Date(ph.createdAt||Date.now())));
+    if(ph.source==='log'){const lg=S.logs.find(x=>x.id===ph.logId);if(lg)from='From a '+tOf(lg.type).label.toLowerCase()+' entry · '+fmtDate(lg.date);}
+    q('#vSrc').textContent=from;
+    q('[data-v="earlier"]').disabled=i===0;
+    q('[data-v="later"]').disabled=i===L.length-1;
+    q('[data-v="prev"]').hidden=L.length<2;
+    q('[data-v="next"]').hidden=L.length<2;
+  }
+  async function flush(){
+    const ph=photoById(cur);if(!ph)return;
+    const v=note.value.trim();
+    if(v===(ph.comment||''))return;
+    ph.comment=v;
+    try{await db.doc('photos/'+ph.id).update({comment:v});q('#vSaved').textContent='Saved';}
+    catch(e){toast('Could not save the note.');}
+  }
+  async function close(){await flush();viewerHook=null;el.remove();if(!layers.children.length)document.body.style.overflow='';render();}
+  el._close=close;
+  viewerHook=()=>paint(false);
+  async function go(d){
+    await flush();
+    const L=list(),i=L.findIndex(p=>p.id===cur),n=i+d;
+    if(n<0||n>=L.length)return;
+    cur=L[n].id;paint(true);
+  }
+  note.addEventListener('input',()=>{q('#vSaved').textContent='';});
+  note.addEventListener('change',flush);
+  let x0=null;
+  q('#vStage').addEventListener('touchstart',e=>{x0=e.touches[0].clientX;},{passive:true});
+  q('#vStage').addEventListener('touchend',e=>{
+    if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;
+    if(Math.abs(dx)>60)go(dx<0?1:-1);
+  },{passive:true});
+  q('#vFile').addEventListener('change',async e=>{
+    const f=e.target.files[0];e.target.value='';if(!f)return;
+    const done=toast('Replacing photo…',true);
+    try{
+      const ph=photoById(cur),old=ph.asset;
+      const blob=await prep(f,1600);const r=await uploadBlob(blob,f);
+      await db.doc('photos/'+cur).update({asset:r.id});
+      ph.asset=r.id;paint(false);
+      await maybeDeleteAsset(old,{exceptPhoto:cur});
+      done();toast('Photo replaced. The note stayed.');
+    }catch(err){done();toast(errMsg(err));}
+  });
+  el.addEventListener('click',async e=>{
+    const b=e.target.closest('[data-v]');if(!b)return;
+    const a=b.dataset.v;
+    if(a==='close')close();
+    else if(a==='prev')go(-1);
+    else if(a==='next')go(1);
+    else if(a==='replace')q('#vFile').click();
+    else if(a==='earlier'||a==='later'){
+      await flush();
+      const L=list(),i=L.findIndex(p=>p.id===cur);
+      await movePhoto(pid,cur,a==='earlier'?i-1:i+1);paint(false);
+    }
+    else if(a==='delete'){
+      if(!confirmed(b))return;
+      const ph=photoById(cur);if(!ph)return;
+      const L=list(),i=L.findIndex(p=>p.id===cur);
+      try{
+        await db.doc('photos/'+ph.id).delete();
+        S.photos=S.photos.filter(p=>p.id!==ph.id);
+        await maybeDeleteAsset(ph.asset,{exceptPhoto:ph.id});
+        const L2=list();
+        if(!L2.length){viewerHook=null;el.remove();if(!layers.children.length)document.body.style.overflow='';render();toast('Photo deleted.');}
+        else{cur=L2[Math.min(i,L2.length-1)].id;paint(true);render();toast('Photo deleted.');}
+      }catch(err){toast(errMsg(err));}
+    }
+  });
+  paint(true);
+}
+
+/* ---------- ordering ---------- */
+async function movePhoto(pid,id,toIndex){
+  const list=photosOf(pid);
+  const from=list.findIndex(p=>p.id===id);
+  if(from<0||toIndex<0||toIndex>=list.length||from===toIndex)return;
+  const item=list.splice(from,1)[0];
+  list.splice(toIndex,0,item);
+  const prev=list[toIndex-1],next=list[toIndex+1];
+  try{
+    if(prev&&next&&Math.abs((next.order||0)-(prev.order||0))<1e-6){
+      for(let i=0;i<list.length;i++){
+        if(list[i].order!==(i+1)*1024){list[i].order=(i+1)*1024;await db.doc('photos/'+list[i].id).update({order:list[i].order});}
+      }
+    }else{
+      let o;
+      if(!prev)o=(next.order||0)-1024;else if(!next)o=(prev.order||0)+1024;else o=((prev.order||0)+(next.order||0))/2;
+      item.order=o;
+      render();
+      await db.doc('photos/'+id).update({order:o});
+    }
+    render();
+  }catch(err){toast('Could not save the new order.');}
+}
+
+/* ---------- drag to reorder (garden arrange mode) ---------- */
+let drag=null;
+function dragUpdate(){
+  const d=drag;if(!d)return;
+  const dy=(d.y-d.y0)+(window.scrollY-d.s0);
+  d.li.style.transform='translateY('+dy+'px) scale(1.015)';
+  const c=d.centers[d.i0]+dy;
+  let n=0;
+  d.centers.forEach((ct,j)=>{if(j!==d.i0&&ct<c)n++;});
+  d.n=n;
+  const shift=d.h+d.gap;
+  d.items.forEach((it,j)=>{
+    if(j===d.i0)return;
+    let t=0;
+    if(d.i0<j&&j<=n)t=-shift;else if(n<=j&&j<d.i0)t=shift;
+    it.style.transform=t?'translateY('+t+'px)':'';
+  });
+}
+function endDrag(cancel){
+  const d=drag;if(!d)return;
+  drag=null;cancelAnimationFrame(d.raf);
+  d.items.forEach(it=>{it.style.transform='';});
+  d.li.classList.remove('dragging');d.list.classList.remove('dragging-list');
+  S.dragging=false;
+  if(!cancel&&d.n!==d.i0)movePlant(S.gardenId,d.id,d.n);else render();
+}
+document.addEventListener('pointerdown',e=>{
+  const g=e.target.closest&&e.target.closest('.grip');
+  if(!g||drag)return;
+  const li=g.closest('li.pcard'),list=li&&li.parentElement;
+  if(!li||!list)return;
+  e.preventDefault();
+  const items=[...list.children],sy=window.scrollY;
+  drag={li:li,list:list,items:items,i0:items.indexOf(li),n:items.indexOf(li),id:li.dataset.id,pid:e.pointerId,
+    y0:e.clientY,y:e.clientY,s0:sy,h:li.offsetHeight,gap:12,raf:0,
+    centers:items.map(it=>{const r=it.getBoundingClientRect();return r.top+sy+r.height/2;})};
+  S.dragging=true;li.classList.add('dragging');list.classList.add('dragging-list');
+  try{g.setPointerCapture(e.pointerId);}catch(_){}
+  const tick=()=>{
+    if(!drag)return;
+    const h=window.innerHeight;let dy=0;
+    if(drag.y<90)dy=-14;else if(drag.y>h-130)dy=14;
+    if(dy){window.scrollBy(0,dy);dragUpdate();}
+    drag.raf=requestAnimationFrame(tick);
+  };
+  drag.raf=requestAnimationFrame(tick);
+});
+document.addEventListener('pointermove',e=>{if(drag&&e.pointerId===drag.pid){drag.y=e.clientY;dragUpdate();}});
+document.addEventListener('pointerup',e=>{if(drag&&e.pointerId===drag.pid)endDrag(false);});
+document.addEventListener('pointercancel',e=>{if(drag&&e.pointerId===drag.pid)endDrag(true);});
+document.addEventListener('keydown',async e=>{
+  const g=e.target.classList&&e.target.classList.contains('grip')?e.target:null;
+  if(!g||(e.key!=='ArrowUp'&&e.key!=='ArrowDown'))return;
+  e.preventDefault();
+  const li=g.closest('li.pcard');if(!li)return;
+  const id=li.dataset.id,idx=[...li.parentElement.children].indexOf(li);
+  await movePlant(S.gardenId,id,e.key==='ArrowUp'?idx-1:idx+1);
+  const ng=document.querySelector('li.pcard[data-id="'+id+'"] .grip');if(ng)ng.focus();
+});
+
+/* ---------- actions ---------- */
+function gotoView(v){S.view=v;S.arrange=false;S.sel=null;S.garrange=false;S.gsel=null;window.scrollTo(0,0);render();}
+const acts={
+  'nav':el=>{S.backTo=null;if(el.dataset.to==='calendar')gotoView('calendar');else{S.plantId=null;gotoView('plants');}},
+  'open-plant':el=>{S.backTo=S.view==='garden'?{}:null;S.plantId=el.dataset.id;S.tab='gallery';gotoView('detail');},
+  'back':()=>{if(S.backTo){S.backTo=null;S.plantId=null;gotoView('garden');}else{S.plantId=null;gotoView('plants');}},
+  'back-garden':()=>{S.gardenId=null;S.pview='gardens';gotoView('plants');},
+  'pview':el=>{S.pview=el.dataset.pv;render();},
+  'open-garden':el=>{S.gardenId=el.dataset.id;S.backTo=null;gotoView('garden');},
+  'add-garden':()=>openGardenSheet(null),
+  'edit-garden':el=>openGardenSheet(el.dataset.id),
+  'assign':()=>openAssignSheet(S.gardenId),
+  'garrange':()=>{S.garrange=!S.garrange;S.gsel=null;render();},
+  'log-main':()=>openLogSheet({main:true}),
+  'log-garden':()=>openLogSheet({plantIds:gardenPlants(S.gardenId).map(p=>p.id)}),
+  'tab':el=>{S.tab=el.dataset.tab;S.arrange=false;S.sel=null;render();},
+  'add-plant':()=>openPlantSheet(null),
+  'edit-plant':el=>openPlantSheet(el.dataset.id),
+  'log-care':()=>openLogSheet({plantId:S.plantId}),
+  'log-day':()=>openLogSheet({date:S.calDay}),
+  'edit-log':el=>openLogSheet({logId:el.dataset.id}),
+  'open-photo':el=>openViewer(el.dataset.id),
+  'pick':el=>{const t=document.getElementById(el.dataset.target);if(t)t.click();},
+  'arrange':()=>{S.arrange=!S.arrange;S.sel=null;render();},
+  'arrange-tap':async el=>{
+    const id=el.dataset.id;
+    if(!S.sel){S.sel=id;render();return;}
+    if(S.sel===id){S.sel=null;render();return;}
+    const from=S.sel;S.sel=null;
+    const to=photosOf(S.plantId).findIndex(p=>p.id===id);
+    await movePhoto(S.plantId,from,to);
+  },
+  'cal-day':el=>{S.calDay=el.dataset.day;render();},
+  'cal-prev':()=>shiftMonth(-1),
+  'cal-next':()=>shiftMonth(1),
+  'cal-today':()=>{S.calMonth=today().slice(0,7);S.calDay=today();render();}
+};
+function shiftMonth(d){
+  const a=S.calMonth.split('-').map(Number),dt=new Date(a[0],a[1]-1+d,1);
+  S.calMonth=dt.getFullYear()+'-'+pad(dt.getMonth()+1);
+  S.calDay=S.calMonth===today().slice(0,7)?today():null;
+  render();
+}
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');
+  if(!el||el.closest('.layer'))return;
+  const f=acts[el.dataset.act];if(f)f(el);
+});
+document.addEventListener('change',async e=>{
+  const t=e.target;if(!t.dataset||!t.dataset.change)return;
+  if(t.dataset.change==='cal-plant'){S.calPlant=t.value;render();}
+  else if(t.dataset.change==='add-photos'){
+    const files=[...t.files];t.value='';const pid=t.dataset.id;
+    if(!files.length)return;
+    let ok=0;
+    try{
+      for(let i=0;i<files.length;i++){
+        toast('Uploading photo '+(i+1)+' of '+files.length+'…',true);
+        await uploadPhoto(pid,files[i],{source:'upload'});ok++;
+      }
+      toast(ok===1?'Photo added.':ok+' photos added.');
+    }catch(err){toast(ok?ok+' added, then: '+errMsg(err):errMsg(err));}
+  }
+});
+
+/* ---------- data ---------- */
+function onData(){render();if(viewerHook)viewerHook();}
+function onErr(){toast('Could not load your data. Pull to refresh.');}
+function watch(name,key,sorter){
+  db.collection(name).onSnapshot(snap=>{
+    S[key]=snap.docs.map(d=>Object.assign({id:d.id},d.data()));
+    if(sorter)S[key].sort(sorter);
+    S.loaded[key]=true;onData();
+  },onErr);
+}
+async function init(){
+  render();
+  const c=window.claude;
+  if(!c||!c.use){S.noDb=true;render();return;}
+  try{db=await c.use('db');}catch(e){db=null;}
+  if(!db){S.noDb=true;render();return;}
+  try{A=await c.use('assets');}catch(e){A=null;}
+  watch('plants','plants',(a,b)=>String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'}));
+  watch('photos','photos');
+  watch('logs','logs');
+  watch('gardens','gardens',(a,b)=>(a.createdAt||0)-(b.createdAt||0));
+}
+init();
+})();
+</script>
+
+</body></html>
